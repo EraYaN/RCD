@@ -1,9 +1,9 @@
-from pynq.overlays.base import Overlay
+from pynq.overlays import Overlay
 from pynq.lib.video import *
 from pynq import MMIO
 
+USE_OPENCV=True
 
-video_capture = cv2.VideoCapture(0)
 
 print("Loading overlay...")
 base = Overlay("/home/xilinx/jupyter_notebooks/box.bit")
@@ -37,7 +37,8 @@ def reset_rect():
 
 import cv2
 import numpy as np
-import face_recognition
+if not USE_OPENCV:
+    import face_recognition
 
 print("Starting face detection...")
 # Initialize some variables
@@ -48,7 +49,7 @@ process_this_frame = True
 
 while True:
     # Grab a single frame of video
-    ret, frame = video_capture.read()
+    frame = hdmi_in.readframe()
 
     # Resize frame of video to 1/4 size for faster face recognition processing
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
@@ -58,37 +59,53 @@ while True:
 
     # Only process every other frame of video to save time
     if process_this_frame:
-        # Find all the faces and face encodings in the current frame of video
-        face_locations = face_recognition.face_locations(rgb_small_frame)
-        #face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+        if not USE_OPENCV:
+            # Find all the faces and face encodings in the current frame of video
+            face_locations = face_recognition.face_locations(rgb_small_frame)
+            #face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-        #face_names = []
-        #for face_encoding in face_encodings:
-            # See if the face is a match for the known face(s)
-            #matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-        #    name = "Unknown"
+            #face_names = []
+            #for face_encoding in face_encodings:
+                # See if the face is a match for the known face(s)
+                #matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            #    name = "Unknown"
 
-            # If a match was found in known_face_encodings, just use the first one.
-            #if True in matches:
-             #   first_match_index = matches.index(True)
-             #   name = known_face_names[first_match_index]
+                # If a match was found in known_face_encodings, just use the first one.
+                #if True in matches:
+                #   first_match_index = matches.index(True)
+                #   name = known_face_names[first_match_index]
 
-        #   face_names.append(name)
-        if len(face_locations) > 0:
-             draw_rect(face_locations[0])
+            #   face_names.append(name)
+            if len(face_locations) > 0:
+                draw_rect(face_locations[0])
+            else:
+                reset_rect()
         else:
-            reset_rect()
+            face_cascade = cv2.CascadeClassifier(
+                '/home/xilinx/jupyter_notebooks/base/video/data/'
+                'haarcascade_frontalface_default.xml')
+            eye_cascade = cv2.CascadeClassifier(
+                '/home/xilinx/jupyter_notebooks/base/video/data/'
+                'haarcascade_eye.xml')
+
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+
+            x0 = faces.x
+            y0 = faces.y
+            x1 = faces.x + faces.w
+            y1 = faces.y + faces.h
+            if len(faces) > 0:
+                draw_rect((y0, x1, y1, x0))
+            else:
+                reset_rect()
 
     process_this_frame = not process_this_frame
 
     # Hit 'q' on the keyboard to quit!
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
-# Release handle to the webcam
-print("Ending OpenCV capture...")
-video_capture.release()
-cv2.destroyAllWindows()
 
 print("Ending HDMI...")
 hdmi_out.stop()
