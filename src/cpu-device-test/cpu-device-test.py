@@ -5,6 +5,43 @@ from pynq import MMIO
 USE_OPENCV=True
 
 
+#box_extra.bit
+# -- 0x00 : reserved
+# -- 0x04 : reserved
+# -- 0x08 : reserved
+# -- 0x0c : reserved
+# -- 0x10 : Data signal of rect_color
+# --        bit 31~0 - rect_color[31:0] (Read/Write)
+# -- 0x14 : reserved
+# -- 0x18 : Data signal of rect_x0
+# --        bit 15~0 - rect_x0[15:0] (Read/Write)
+# --        others   - reserved
+# -- 0x1c : reserved
+# -- 0x20 : Data signal of rect_y0
+# --        bit 15~0 - rect_y0[15:0] (Read/Write)
+# --        others   - reserved
+# -- 0x24 : reserved
+# -- 0x28 : Data signal of rect_x1
+# --        bit 15~0 - rect_x1[15:0] (Read/Write)
+# --        others   - reserved
+# -- 0x2c : reserved
+# -- 0x30 : Data signal of rect_y1
+# --        bit 15~0 - rect_y1[15:0] (Read/Write)
+# --        others   - reserved
+# -- 0x34 : reserved
+# -- 0x38 : Data signal of rect_s
+# --        bit 15~0 - rect_s[15:0] (Read/Write)
+# --        others   - reserved
+# -- 0x3c : reserved
+# -- 0x40 : Data signal of idx
+# --        bit 7~0 - idx[7:0] (Read/Write)
+# --        others  - reserved
+# -- 0x44 : reserved
+# -- 0x48 : Data signal of write_rect
+# --        bit 0  - write_rect[0] (Read/Write)
+# --        others - reserved
+# -- 0x4c : reserved
+
 print("Loading overlay...")
 base = Overlay("/home/xilinx/jupyter_notebooks/box.bit")
 hdmi_in = base.video.hdmi_in
