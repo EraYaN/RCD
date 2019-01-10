@@ -26,10 +26,10 @@ stream = MMIO(0x8000_0000,0x1000)
 def draw_rect(face_location):
     (y0, x1, y1, x0) = face_location
     stream.write(0x10, x0*4) #x0
-	stream.write(0x18, y0*4) #y0
-	stream.write(0x20, x1*4) #x1
-	stream.write(0x28, y1*4) #y1
-	stream.write(0x30, 10) #s
+    stream.write(0x18, y0*4) #y0
+    stream.write(0x20, x1*4) #x1
+    stream.write(0x28, y1*4) #y1
+    stream.write(0x30, 10) #s
     stream.write(0x38, 0x5500FF00) #color
 
 def reset_rect():
