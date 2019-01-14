@@ -45,7 +45,7 @@ DEVICE_RECTS=2
 if DEVICE_COMPOSITION:
     print("Loading custom overlay...")
     from pynq import Overlay
-    base = Overlay("/home/xilinx/jupyter_notebooks/box.bit")
+    base = Overlay("/home/xilinx/box_multi.bit")
 else:
     print("Loading base overlay...")
     from pynq.overlays.base import BaseOverlay
@@ -73,11 +73,11 @@ try:
     framen = 0
 
     if DEVICE_COMPOSITION:
-        stream = MMIO(0x8000_0000,0x1000)
+        stream = MMIO(0x8000_0000,0x7FFF)
 
     def draw_rect(idx, face_location, frame=None):
         (x0, y0, x1, y1) = face_location
-        print("Draw rect at ({0}, {1}) ({2}, {3})".format(x0,y0,x1,y1))
+        print("Draw rect {4} at ({0}, {1}) ({2}, {3})".format(x0,y0,x1,y1,idx))
 
         if DEVICE_COMPOSITION:
             stream.write(0x10, int(x0*4)) #x0
@@ -93,7 +93,7 @@ try:
             cv2.rectangle(frame, (x0, y0), (x1, y1), (0, 0, 255), 2)
 
     def reset_rect(idx):
-
+        print("Remove rect {0}".format(idx))
         if DEVICE_COMPOSITION:
             stream.write(0x38, 0x00000000) #color
             stream.write(0x48, 1) #write_rect
