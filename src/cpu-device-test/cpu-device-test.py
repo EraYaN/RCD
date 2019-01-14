@@ -1,9 +1,8 @@
-from pynq.overlays import Overlay
-from pynq.lib.video import *
-from pynq import MMIO
+import traceback
 
 USE_OPENCV=True
-
+DEVICE_COMPOSITION=True
+DEVICE_RECTS=2
 
 #box_extra.bit
 # -- 0x00 : reserved
@@ -42,107 +41,145 @@ USE_OPENCV=True
 # --        others - reserved
 # -- 0x4c : reserved
 
-print("Loading overlay...")
-base = Overlay("/home/xilinx/jupyter_notebooks/box.bit")
+
+if DEVICE_COMPOSITION:
+    print("Loading custom overlay...")
+    from pynq import Overlay
+    base = Overlay("/home/xilinx/jupyter_notebooks/box.bit")
+else:
+    print("Loading base overlay...")
+    from pynq.overlays.base import BaseOverlay
+    base = BaseOverlay("base.bit")
+
+from pynq.lib.video import *
+from pynq import MMIO
+
 hdmi_in = base.video.hdmi_in
 hdmi_out = base.video.hdmi_out
 print("Configuring HDMI...")
 
-hdmi_in.configure(PIXEL_RGB)
-hdmi_out.configure(hdmi_in.mode, PIXEL_RGB)
+try:
+    hdmi_in.configure(PIXEL_RGBA)
+    hdmi_out.configure(hdmi_in.mode, PIXEL_RGBA)
 
-print("Starting HDMI...")
-hdmi_in.start()
-hdmi_out.start()
+    print("Starting HDMI...")
+    hdmi_in.start()
+    hdmi_out.start()
 
-total_frames = 200
-framen = 0
+    if DEVICE_COMPOSITION:
+        hdmi_in.tie(hdmi_out)
 
-stream = MMIO(0x8000_0000,0x1000)
+    total_frames = 200
+    framen = 0
 
-def draw_rect(face_location):
-    (y0, x1, y1, x0) = face_location
-    stream.write(0x10, x0*4) #x0
-    stream.write(0x18, y0*4) #y0
-    stream.write(0x20, x1*4) #x1
-    stream.write(0x28, y1*4) #y1
-    stream.write(0x30, 10) #s
-    stream.write(0x38, 0x5500FF00) #color
+    if DEVICE_COMPOSITION:
+        stream = MMIO(0x8000_0000,0x1000)
 
-def reset_rect():
-    stream.write(0x38, 0x00000000) #color
+    def draw_rect(idx, face_location, frame=None):
+        (x0, y0, x1, y1) = face_location
+        print("Draw rect at ({0}, {1}) ({2}, {3})".format(x0,y0,x1,y1))
 
-import cv2
-import numpy as np
-if not USE_OPENCV:
-    import face_recognition
-
-print("Starting face detection...")
-# Initialize some variables
-face_locations = []
-face_encodings = []
-face_names = []
-process_this_frame = True
-
-while True:
-    # Grab a single frame of video
-    frame = hdmi_in.readframe()
-
-    # Resize frame of video to 1/4 size for faster face recognition processing
-    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-
-    # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-    rgb_small_frame = small_frame[:, :, ::-1]
-
-    # Only process every other frame of video to save time
-    if process_this_frame:
-        if not USE_OPENCV:
-            # Find all the faces and face encodings in the current frame of video
-            face_locations = face_recognition.face_locations(rgb_small_frame)
-            #face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
-            #face_names = []
-            #for face_encoding in face_encodings:
-                # See if the face is a match for the known face(s)
-                #matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-            #    name = "Unknown"
-
-                # If a match was found in known_face_encodings, just use the first one.
-                #if True in matches:
-                #   first_match_index = matches.index(True)
-                #   name = known_face_names[first_match_index]
-
-            #   face_names.append(name)
-            if len(face_locations) > 0:
-                draw_rect(face_locations[0])
-            else:
-                reset_rect()
+        if DEVICE_COMPOSITION:
+            stream.write(0x10, int(x0*4)) #x0
+            stream.write(0x18, int(y0*4)) #y0
+            stream.write(0x20, int(x1*4)) #x1
+            stream.write(0x28, int(y1*4)) #y1
+            stream.write(0x30, 10) #s
+            stream.write(0x38, 0x5500FF00) #color
+            stream.write(0x40, int(idx & 0xFF)) #idx
+            stream.write(0x48, 1) #write_rect
+            stream.write(0x48, 0) #write_rect
         else:
-            face_cascade = cv2.CascadeClassifier(
-                '/home/xilinx/jupyter_notebooks/base/video/data/'
-                'haarcascade_frontalface_default.xml')
-            eye_cascade = cv2.CascadeClassifier(
-                '/home/xilinx/jupyter_notebooks/base/video/data/'
-                'haarcascade_eye.xml')
+            cv2.rectangle(frame, (x0, y0), (x1, y1), (0, 0, 255), 2)
 
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    def reset_rect(idx):
 
+        if DEVICE_COMPOSITION:
+            stream.write(0x38, 0x00000000) #color
+            stream.write(0x48, 1) #write_rect
+            stream.write(0x48, 0) #write_rect
 
-            x0 = faces.x
-            y0 = faces.y
-            x1 = faces.x + faces.w
-            y1 = faces.y + faces.h
-            if len(faces) > 0:
-                draw_rect((y0, x1, y1, x0))
-            else:
-                reset_rect()
+    import cv2
+    import numpy as np
+    if not USE_OPENCV:
+        import face_recognition
 
-    process_this_frame = not process_this_frame
+    print("Starting face detection...")
+    # Initialize some variables
+    face_locations = []
+    face_encodings = []
+    face_names = []
+    process_this_frame = True
+    try:
+        while True:
+            # Grab a single frame of video
+            frame = hdmi_in.readframe()
 
-    # Hit 'q' on the keyboard to quit!
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+            # Resize frame of video to 1/4 size for faster face recognition processing
+            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+
+            # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+            rgb_small_frame = small_frame[:, :, ::-1]
+
+            # Only process every other frame of video to save time
+            if process_this_frame:
+                if not USE_OPENCV:
+                    # Find all the faces and face encodings in the current frame of video
+                    face_locations = face_recognition.face_locations(rgb_small_frame)
+                    #face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+                    #   face_names.append(name)
+                    if len(face_locations) >= 2:
+                        draw_rect(0,face_locations[0], frame=frame)
+                        draw_rect(1,face_locations[1], frame=frame)
+                    elif len(face_locations) >= 1:
+                        draw_rect(0,face_locations[0], frame=frame)
+                        reset_rect(1)
+                    else:
+                        reset_rect(0)
+                        reset_rect(1)
+                else:
+                    face_cascade = cv2.CascadeClassifier(
+                        '/home/xilinx/jupyter_notebooks/base/video/data/'
+                        'haarcascade_frontalface_default.xml')
+                    eye_cascade = cv2.CascadeClassifier(
+                        '/home/xilinx/jupyter_notebooks/base/video/data/'
+                        'haarcascade_eye.xml')
+
+                    gray = cv2.cvtColor(rgb_small_frame, cv2.COLOR_BGR2GRAY)
+                    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+                    print("Found {} faces.".format(len(faces)))
+                    idx = 0
+                    for (x, y, w, h) in faces:
+                        if idx >= DEVICE_RECTS:
+                            break
+                        x0 = x
+                        y0 = y
+                        x1 = x + w
+                        y1 = y + h
+                        draw_rect(idx,(x0, y0, x1, y1), frame=frame)
+                        idx+=1
+
+                    while idx<DEVICE_RECTS:
+                        reset_rect(idx)
+                        idx+=1
+
+                    if not DEVICE_COMPOSITION:
+                        hdmi_out.writeframe(frame)
+                    
+
+            process_this_frame = not process_this_frame
+
+            # Hit 'q' on the keyboard to quit!
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                print("Quitting...")
+                break
+    except KeyboardInterrupt:
+        print("Got Ctrl+C. Quitting...")
+except Exception:
+    traceback.print_exc()
+    print("Got Exception. Quitting...")
 
 print("Ending HDMI...")
 hdmi_out.stop()
