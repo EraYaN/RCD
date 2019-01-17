@@ -18,12 +18,13 @@
 #define SA(v) (((v)&0xFF) << 24)
 
 typedef ap_uint<24> pixel_color;
-typedef ap_uint<104> rect_vector;
+typedef ap_uint<112> rect_vector;
 typedef ap_axiu<32, 1, 1, 1> pixel_data;
 typedef hls::stream<pixel_data> pixel_stream;
 
 typedef struct
 {
+    bool is_on;
     uint32_t color;
     uint16_t x0;
     uint16_t y0;
@@ -94,10 +95,10 @@ uint32_t combine_color(uint8_t R, uint8_t G, uint8_t B)
 
 bool is_on_rect(rectangle rect, uint16_t x, uint16_t y)
 {
-    return (x >= rect.x0 - rect.s && x < rect.x0 && y >= rect.y0 - rect.s && y <= rect.y1 + rect.s) ||
+    return rect.is_on && ((x >= rect.x0 - rect.s && x < rect.x0 && y >= rect.y0 - rect.s && y <= rect.y1 + rect.s) ||
            (x > rect.x1 && x <= rect.x1 + rect.s && y >= rect.y0 - rect.s && y <= rect.y1 + rect.s) ||
            (x >= rect.x0 && x <= rect.x1 && y > rect.y1 && y <= rect.y1 + rect.s) ||
-           (x >= rect.x0 && x <= rect.x1 && y >= rect.y0 - rect.s && y < rect.y0);
+           (x >= rect.x0 && x <= rect.x1 && y >= rect.y0 - rect.s && y < rect.y0));
 }
 
 uint32_t composite_pixel(uint32_t color, uint32_t pixel_in)
@@ -110,6 +111,7 @@ uint32_t composite_pixel(uint32_t color, uint32_t pixel_in)
 }
 
 void set_rect_values(rectangle& rect, rect_vector& rect_in){
+	rect.is_on = (rect_in(96,96) != 0);
     rect.color = ah2argb(rect_in(95,80));
     rect.x0 = rect_in(79,64);
     rect.y0 = rect_in(63,48);
@@ -120,13 +122,14 @@ void set_rect_values(rectangle& rect, rect_vector& rect_in){
 
 ap_int<96> rect_in;
 
-void stream(pixel_stream &src, /*pixel_stream &dst,*/ pixel_stream &dst_hq, rect_vector rect_in)
+void stream(pixel_stream &src, /*pixel_stream &dst,*/ pixel_stream &dst_hq, uint16_t idx, rect_vector rect_in)
 {
 #pragma HLS INTERFACE ap_ctrl_none port = return
 #pragma HLS INTERFACE axis port = &src
 
 //#pragma HLS INTERFACE axis port = &dst
 #pragma HLS INTERFACE axis port = &dst_hq
+#pragma HLS INTERFACE s_axilite port = idx
 #pragma HLS INTERFACE s_axilite port = rect_in
 #pragma HLS PIPELINE II = 1
 
@@ -134,20 +137,18 @@ void stream(pixel_stream &src, /*pixel_stream &dst,*/ pixel_stream &dst_hq, rect
     static uint16_t x = 0;
     static uint16_t y = 0;
 
-    ap_uint<8> idx = rect_in(103,96);
-
     //static uint32_t l0[WIDTH >> 4];
 
     //static uint32_t tmp_pixel = 0;
 
-    static rectangle rect1 = {0, 0, 0, 0, 0};
-    static rectangle rect2 = {0, 0, 0, 0, 0};
-    static rectangle rect3 = {0, 0, 0, 0, 0};
-    static rectangle rect4 = {0, 0, 0, 0, 0};
-    static rectangle rect5 = {0, 0, 0, 0, 0};
-    static rectangle rect6 = {0, 0, 0, 0, 0};
-    static rectangle rect7 = {0, 0, 0, 0, 0};
-    static rectangle rect8 = {0, 0, 0, 0, 0};
+    static rectangle rect1 = {true, 0, 0, 0, 0, 0, 0};
+    static rectangle rect2 = {true, 0, 0, 0, 0, 0, 0};
+    static rectangle rect3 = {true, 0, 0, 0, 0, 0, 0};
+    static rectangle rect4 = {true, 0, 0, 0, 0, 0, 0};
+    static rectangle rect5 = {true, 0, 0, 0, 0, 0, 0};
+    static rectangle rect6 = {true, 0, 0, 0, 0, 0, 0};
+    static rectangle rect7 = {true, 0, 0, 0, 0, 0, 0};
+    static rectangle rect8 = {true, 0, 0, 0, 0, 0, 0};
 
     //static bool is_second_fb = false;
     //static pixel_color frame_buffer[FBUF_SIZE*2];

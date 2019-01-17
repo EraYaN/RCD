@@ -4,48 +4,10 @@ USE_OPENCV=True
 DEVICE_COMPOSITION=True
 DEVICE_RECTS=8
 
-# -- ------------------------Address Info-------------------
-# -- 0x00 : reserved
-# -- 0x04 : reserved
-# -- 0x08 : reserved
-# -- 0x0c : reserved
-# -- 0x10 : Data signal of rect1_color
-# --        bit 31~0 - rect1_color[31:0] (Read/Write)
-# -- 0x14 : reserved
-# -- 0x18 : Data signal of rect1_x0
-# --        bit 15~0 - rect1_x0[15:0] (Read/Write)
-# --        others   - reserved
-# -- 0x1c : reserved
-# -- 0x20 : Data signal of rect1_y0
-# --        bit 15~0 - rect1_y0[15:0] (Read/Write)
-# --        others   - reserved
-# -- 0x24 : reserved
-# -- 0x28 : Data signal of rect1_x1
-# --        bit 15~0 - rect1_x1[15:0] (Read/Write)
-# --        others   - reserved
-# -- 0x2c : reserved
-# -- 0x30 : Data signal of rect1_y1
-# --        bit 15~0 - rect1_y1[15:0] (Read/Write)
-# --        others   - reserved
-# -- 0x34 : reserved
-# -- 0x38 : Data signal of rect1_s
-# --        bit 15~0 - rect1_s[15:0] (Read/Write)
-# --        others   - reserved
-# -- 0x3c : reserved
-# -- 0x40 : Data signal of idx
-# --        bit 7~0 - idx[7:0] (Read/Write)
-# --        others  - reserved
-# -- 0x44 : reserved
-# -- 0x48 : Data signal of write_rect
-# --        bit 0  - write_rect[0] (Read/Write)
-# --        others - reserved
-# -- 0x4c : reserved
-
-
 if DEVICE_COMPOSITION:
     print("Loading custom overlay...")
     from pynq import Overlay
-    base = Overlay("/home/xilinx/jupyter_notebooks/box_eight.bit")
+    base = Overlay("/home/xilinx/bitstream/box_packed_hsv.bit")
 else:
     print("Loading base overlay...")
     from pynq.overlays.base import BaseOverlay
@@ -56,6 +18,7 @@ from pynq import MMIO
 import random
 import math
 import time
+import struct
 
 hdmi_in = base.video.hdmi_in
 hdmi_out = base.video.hdmi_out
@@ -76,33 +39,35 @@ try:
     framen = 0
 
     if DEVICE_COMPOSITION:
-        stream = MMIO(0x8000_0000,0x7FFF)
+        stream = MMIO(0x7FFF_8000, 0x7FFF)
 
     def draw_rect(idx, face_location, frame=None):
         (x0, y0, x1, y1) = face_location
         print("Draw rect {4} at ({0}, {1}) ({2}, {3})".format(x0,y0,x1,y1,idx))
 
         if DEVICE_COMPOSITION:
-
-            stream.write(0x10, (random.randint(0x40,0xFF) << 24) | random.randint(0,0xFFFFFF)) #color
-            stream.write(0x18, int(x0*4)) #x0
-            stream.write(0x20, int(y0*4)) #y0
-            stream.write(0x28, int(x1*4)) #x1
-            stream.write(0x30, int(y1*4)) #y1
-            stream.write(0x38, math.ceil((x1-x0)/4)) #s
-            stream.write(0x40, int(idx & 0xFF)) #idx
-            stream.write(0x48, 1) #write_rect
-            stream.write(0x48, 0) #write_rect
+            data = struct.pack(">HHHHHHHH",
+                int(idx & 0xFFFF), # index, 16-bits (just for padding)
+                1, # ON signal, 16-bit
+                (random.randint(0x40,0xFF) << 8) | random.randint(0,0xFF), # alpha and hue, 16-bit
+                int(x0*4), #x0, 16-bit
+                int(y0*4), #y0, 16-bit
+                int(x1*4), #x1, 16-bit
+                int(y1*4), #y1, 16-bit
+                math.ceil((x1-x0)/4) #stroke, 16-bit
+            )
+            stream.write(0x10,data)
         else:
             cv2.rectangle(frame, (x0*4, y0*4), (x1*4, y1*4), (random.randint(0,0xFF), random.randint(0,0xFF), random.randint(0,0xFF)), math.ceil((x1-x0)/4))
 
     def reset_rect(idx):
         print("Remove rect {0}".format(idx))
         if DEVICE_COMPOSITION:
-            stream.write(0x10, 0x00000000) #color
-            stream.write(0x40, int(idx & 0xFF)) #idx
-            stream.write(0x48, 1) #write_rect
-            stream.write(0x48, 0) #write_rect
+            data = struct.pack("HH",
+                int(idx & 0xFFFF), # 16-bits (just for padding)
+                0
+            )
+            stream.write(0x10,data)
 
     import cv2
     import numpy as np
@@ -148,10 +113,6 @@ try:
                     reset_rect(0)
                     reset_rect(1)
             else:
-                
-                # eye_cascade = cv2.CascadeClassifier(
-                #     '/home/xilinx/jupyter_notebooks/base/video/data/'
-                #     'haarcascade_eye.xml')
 
                 gray = cv2.cvtColor(small_frame, cv2.COLOR_RGB2GRAY)
                 faces = face_cascade.detectMultiScale(gray, 1.3, 5)
@@ -176,7 +137,7 @@ try:
                     hdmi_out.writeframe(frame)
                     
             end_frametime = time.perf_counter()
-            print("Frame time: {0:.3f}; FPS: {1:.3f}",end_frametime-start_frametime,1/(end_frametime-start_frametime))
+            print("Frame time: {0:.3f}; FPS: {1:.3f}".format(end_frametime-start_frametime,1/(end_frametime-start_frametime)))
             # Hit 'q' on the keyboard to quit!
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print("Quitting...")
