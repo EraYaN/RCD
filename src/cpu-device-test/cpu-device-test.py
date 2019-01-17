@@ -88,12 +88,12 @@ try:
             stream.write(0x20, int(y0*4)) #y0
             stream.write(0x28, int(x1*4)) #x1
             stream.write(0x30, int(y1*4)) #y1
-            stream.write(0x38, math.ceil((x1-x0)/10) #s
+            stream.write(0x38, math.ceil((x1-x0)/4)) #s
             stream.write(0x40, int(idx & 0xFF)) #idx
             stream.write(0x48, 1) #write_rect
             stream.write(0x48, 0) #write_rect
         else:
-            cv2.rectangle(frame, (x0*4, y0*4), (x1*4, y1*4), (0, 255, 0), 2)
+            cv2.rectangle(frame, (x0*4, y0*4), (x1*4, y1*4), (random.randint(0,0xFF), random.randint(0,0xFF), random.randint(0,0xFF)), math.ceil((x1-x0)/4))
 
     def reset_rect(idx):
         print("Remove rect {0}".format(idx))
