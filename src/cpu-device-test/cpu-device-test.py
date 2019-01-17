@@ -45,7 +45,7 @@ DEVICE_RECTS=8
 if DEVICE_COMPOSITION:
     print("Loading custom overlay...")
     from pynq import Overlay
-    base = Overlay("/home/xilinx/box_multi.bit")
+    base = Overlay("/home/xilinx/jupyter_notebooks/box_eight.bit")
 else:
     print("Loading base overlay...")
     from pynq.overlays.base import BaseOverlay
