@@ -80,12 +80,13 @@ try:
         print("Draw rect {4} at ({0}, {1}) ({2}, {3})".format(x0,y0,x1,y1,idx))
 
         if DEVICE_COMPOSITION:
-            stream.write(0x10, int(x0*4)) #x0
-            stream.write(0x18, int(y0*4)) #y0
-            stream.write(0x20, int(x1*4)) #x1
-            stream.write(0x28, int(y1*4)) #y1
-            stream.write(0x30, 10) #s
-            stream.write(0x38, 0x5500FF00) #color
+
+            stream.write(0x10, 0x5500FF00) #color
+            stream.write(0x18, int(x0*4)) #x0
+            stream.write(0x20, int(y0*4)) #y0
+            stream.write(0x28, int(x1*4)) #x1
+            stream.write(0x30, int(y1*4)) #y1
+            stream.write(0x38, 10) #s
             stream.write(0x40, int(idx & 0xFF)) #idx
             stream.write(0x48, 1) #write_rect
             stream.write(0x48, 0) #write_rect
@@ -95,7 +96,7 @@ try:
     def reset_rect(idx):
         print("Remove rect {0}".format(idx))
         if DEVICE_COMPOSITION:
-            stream.write(0x38, 0x00000000) #color
+            stream.write(0x10, 0x00000000) #color
             stream.write(0x48, 1) #write_rect
             stream.write(0x48, 0) #write_rect
 
