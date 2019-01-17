@@ -91,7 +91,7 @@ try:
             stream.write(0x48, 1) #write_rect
             stream.write(0x48, 0) #write_rect
         else:
-            cv2.rectangle(frame, (x0, y0), (x1, y1), (0, 0, 255), 2)
+            cv2.rectangle(frame, (x0*4, y0*4), (x1*4, y1*4), (0, 255, 0), 2)
 
     def reset_rect(idx):
         print("Remove rect {0}".format(idx))
