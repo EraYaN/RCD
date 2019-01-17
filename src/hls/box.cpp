@@ -62,12 +62,12 @@ uint32_t composite_pixel(uint32_t color, uint32_t pixel_in){
 	return combine_color(R,G,B);
 }
 
-void stream(pixel_stream &src, /*pixel_stream &dst,*/ pixel_stream &dst_hq, rectangle rect_in, uint8_t idx, uint8_t write_rect)
+void stream(pixel_stream &src, pixel_stream &dst, pixel_stream &dst_hq, rectangle rect_in, uint8_t idx, uint8_t write_rect)
 {
 #pragma HLS INTERFACE ap_ctrl_none port=return
 #pragma HLS INTERFACE axis port=&src
 
-//#pragma HLS INTERFACE axis port=&dst
+#pragma HLS INTERFACE axis port=&dst
 #pragma HLS INTERFACE axis port=&dst_hq
 #pragma HLS INTERFACE s_axilite port=rect_in
 #pragma HLS INTERFACE s_axilite port=idx
@@ -84,6 +84,12 @@ void stream(pixel_stream &src, /*pixel_stream &dst,*/ pixel_stream &dst_hq, rect
 
 	static rectangle rect1 = {0,0,0,0,0};
 	static rectangle rect2 = {0,0,0,0,0};
+	static rectangle rect3 = {0,0,0,0,0};
+	static rectangle rect4 = {0,0,0,0,0};
+	static rectangle rect5 = {0,0,0,0,0};
+	static rectangle rect6 = {0,0,0,0,0};
+	static rectangle rect7 = {0,0,0,0,0};
+	static rectangle rect8 = {0,0,0,0,0};
 
 	//static bool is_second_fb = false;
 	//static pixel_color frame_buffer[FBUF_SIZE*2];
@@ -124,15 +130,30 @@ void stream(pixel_stream &src, /*pixel_stream &dst,*/ pixel_stream &dst_hq, rect
 	// Current (incoming) pixel data
 	bool is_on_rect1 = is_on_rect(rect1,x,y);
 	bool is_on_rect2 = is_on_rect(rect2,x,y);
-
+	bool is_on_rect3 = is_on_rect(rect3,x,y);
+	bool is_on_rect4 = is_on_rect(rect4,x,y);
+	bool is_on_rect5 = is_on_rect(rect5,x,y);
+	bool is_on_rect6 = is_on_rect(rect6,x,y);
+	bool is_on_rect7 = is_on_rect(rect7,x,y);
+	bool is_on_rect8 = is_on_rect(rect8,x,y);
 	uint32_t pixel;
 
-	if(is_on_rect1 && is_on_rect2){
-		pixel = composite_pixel(rect_in.color,p_in.data);
-	} else if (is_on_rect1){
-		pixel = composite_pixel(rect_in.color,p_in.data);
+	if (is_on_rect1){
+		pixel = composite_pixel(rect1.color,p_in.data);
 	} else if (is_on_rect2){
 		pixel = composite_pixel(rect2.color,p_in.data);
+	} else if (is_on_rect3){
+		pixel = composite_pixel(rect3.color,p_in.data);
+	} else if (is_on_rect4){
+		pixel = composite_pixel(rect4.color,p_in.data);
+	} else if (is_on_rect5){
+		pixel = composite_pixel(rect5.color,p_in.data);
+	} else if (is_on_rect6){
+		pixel = composite_pixel(rect6.color,p_in.data);
+	} else if (is_on_rect7){
+		pixel = composite_pixel(rect7.color,p_in.data);
+	} else if (is_on_rect8){
+		pixel = composite_pixel(rect8.color,p_in.data);
 	} else {
 		pixel = p_in.data;
 	}
