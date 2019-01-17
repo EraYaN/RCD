@@ -2,34 +2,34 @@ import traceback
 
 USE_OPENCV=True
 DEVICE_COMPOSITION=True
-DEVICE_RECTS=2
+DEVICE_RECTS=8
 
-#box_extra.bit
+# -- ------------------------Address Info-------------------
 # -- 0x00 : reserved
 # -- 0x04 : reserved
 # -- 0x08 : reserved
 # -- 0x0c : reserved
-# -- 0x10 : Data signal of rect_color
-# --        bit 31~0 - rect_color[31:0] (Read/Write)
+# -- 0x10 : Data signal of rect1_color
+# --        bit 31~0 - rect1_color[31:0] (Read/Write)
 # -- 0x14 : reserved
-# -- 0x18 : Data signal of rect_x0
-# --        bit 15~0 - rect_x0[15:0] (Read/Write)
+# -- 0x18 : Data signal of rect1_x0
+# --        bit 15~0 - rect1_x0[15:0] (Read/Write)
 # --        others   - reserved
 # -- 0x1c : reserved
-# -- 0x20 : Data signal of rect_y0
-# --        bit 15~0 - rect_y0[15:0] (Read/Write)
+# -- 0x20 : Data signal of rect1_y0
+# --        bit 15~0 - rect1_y0[15:0] (Read/Write)
 # --        others   - reserved
 # -- 0x24 : reserved
-# -- 0x28 : Data signal of rect_x1
-# --        bit 15~0 - rect_x1[15:0] (Read/Write)
+# -- 0x28 : Data signal of rect1_x1
+# --        bit 15~0 - rect1_x1[15:0] (Read/Write)
 # --        others   - reserved
 # -- 0x2c : reserved
-# -- 0x30 : Data signal of rect_y1
-# --        bit 15~0 - rect_y1[15:0] (Read/Write)
+# -- 0x30 : Data signal of rect1_y1
+# --        bit 15~0 - rect1_y1[15:0] (Read/Write)
 # --        others   - reserved
 # -- 0x34 : reserved
-# -- 0x38 : Data signal of rect_s
-# --        bit 15~0 - rect_s[15:0] (Read/Write)
+# -- 0x38 : Data signal of rect1_s
+# --        bit 15~0 - rect1_s[15:0] (Read/Write)
 # --        others   - reserved
 # -- 0x3c : reserved
 # -- 0x40 : Data signal of idx
@@ -115,17 +115,16 @@ try:
             # Grab a single frame of video
             frame = hdmi_in.readframe()
 
-            # Resize frame of video to 1/4 size for faster face recognition processing
-            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-
-            # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-            rgb_small_frame = small_frame[:, :, ::-1]
-
             # Only process every other frame of video to save time
             if process_this_frame:
+                # Resize frame of video to 1/4 size for faster face recognition processing
+                small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+
+                # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+                # rgb_small_frame = small_frame[:, :, ::-1]
                 if not USE_OPENCV:
                     # Find all the faces and face encodings in the current frame of video
-                    face_locations = face_recognition.face_locations(rgb_small_frame)
+                    face_locations = face_recognition.face_locations(small_frame)
                     #face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
                     #   face_names.append(name)
@@ -146,7 +145,7 @@ try:
                         '/home/xilinx/jupyter_notebooks/base/video/data/'
                         'haarcascade_eye.xml')
 
-                    gray = cv2.cvtColor(rgb_small_frame, cv2.COLOR_BGR2GRAY)
+                    gray = cv2.cvtColor(small_frame, cv2.COLOR_RGB2GRAY)
                     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
                     print("Found {} faces.".format(len(faces)))
