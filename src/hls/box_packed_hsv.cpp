@@ -36,7 +36,7 @@ uint32_t ah2argb(ap_uint<16> ah)
 {
     uint32_t argb = SA((uint8_t)ah(15,8));
     ap_int<8> h = ah(7,0);
-    unsigned char h2, f, p, q, t, h2;
+    unsigned char region, remainder, p, q, t;
     uint8_t v = 255;
     uint8_t s = 255;
 
@@ -47,7 +47,7 @@ uint32_t ah2argb(ap_uint<16> ah)
     q = (v * (255 - ((s * remainder) >> 8))) >> 8;
     t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
 
-    switch (h2)
+    switch (region)
     {
     case 0:
         argb = argb | SR(v) | SG(t) | SB(p);
@@ -110,22 +110,22 @@ uint32_t composite_pixel(uint32_t color, uint32_t pixel_in)
 }
 
 void set_rect_values(rectangle& rect, rect_vector& rect_in){
-    rect1.color = ah2argb(rect_in(95,80));
-    rect1.x0 = rect_in(79,64);
-    rect1.y0 = rect_in(63,48);
-    rect1.x1 = rect_in(47,32);
-    rect1.y1 = rect_in(31,16);
-    rect1.s = rect_in(15,0);
+    rect.color = ah2argb(rect_in(95,80));
+    rect.x0 = rect_in(79,64);
+    rect.y0 = rect_in(63,48);
+    rect.x1 = rect_in(47,32);
+    rect.y1 = rect_in(31,16);
+    rect.s = rect_in(15,0);
 }
 
 ap_int<96> rect_in;
 
-void stream(pixel_stream &src, pixel_stream &dst, pixel_stream &dst_hq, rect_vector rect_in)
+void stream(pixel_stream &src, /*pixel_stream &dst,*/ pixel_stream &dst_hq, rect_vector rect_in)
 {
 #pragma HLS INTERFACE ap_ctrl_none port = return
 #pragma HLS INTERFACE axis port = &src
 
-#pragma HLS INTERFACE axis port = &dst
+//#pragma HLS INTERFACE axis port = &dst
 #pragma HLS INTERFACE axis port = &dst_hq
 #pragma HLS INTERFACE s_axilite port = rect_in
 #pragma HLS PIPELINE II = 1
@@ -153,36 +153,33 @@ void stream(pixel_stream &src, pixel_stream &dst, pixel_stream &dst_hq, rect_vec
     //static pixel_color frame_buffer[FBUF_SIZE*2];
     //#pragma HLS DEPENDENCE variable=frame_buffer inter false
 
-    if (write_rect != 0)
-    {
-        switch (idx)
-        {
-        case 0:
-            set_rect_values(rect1,rect_in);
-            break;
-        case 1:
-            set_rect_values(rect2,rect_in);
-            break;
-        case 2:
-            set_rect_values(rect3,rect_in);
-            break;
-        case 3:
-            set_rect_values(rect4,rect_in);
-            break;
-        case 4:
-            set_rect_values(rect5,rect_in);
-            break;
-        case 5:
-            set_rect_values(rect6,rect_in);
-            break;
-        case 6:
-            set_rect_values(rect7,rect_in);
-            break;
-        case 7:
-            set_rect_values(rect8,rect_in);
-            break;
-        }
-    }
+    switch (idx)
+	{
+	case 0:
+		set_rect_values(rect1,rect_in);
+		break;
+	case 1:
+		set_rect_values(rect2,rect_in);
+		break;
+	case 2:
+		set_rect_values(rect3,rect_in);
+		break;
+	case 3:
+		set_rect_values(rect4,rect_in);
+		break;
+	case 4:
+		set_rect_values(rect5,rect_in);
+		break;
+	case 5:
+		set_rect_values(rect6,rect_in);
+		break;
+	case 6:
+		set_rect_values(rect7,rect_in);
+		break;
+	case 7:
+		set_rect_values(rect8,rect_in);
+		break;
+	}
 
     int current_line = y >> 2;
     int current_pixel = x >> 2;
